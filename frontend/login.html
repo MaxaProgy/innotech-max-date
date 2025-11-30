@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <a href="/" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+      </div>
+      
+      <div class="auth-card">
+        <h1 class="auth-title">Вход</h1>
+        
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input 
+              type="email" 
+              id="email" 
+              class="form-input" 
+              placeholder="example@mail.ru"
+              required
+            >
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="password">Пароль</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="form-input" 
+              placeholder="Введите пароль"
+              required
+            >
+          </div>
+          
+          <div class="form-group" style="text-align: right;">
+            <a href="/forgot-password.html">Забыли пароль?</a>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-lg btn-block" id="submit-btn">
+            Войти
+          </button>
+        </form>
+        
+        <div class="auth-footer">
+          Нет аккаунта? <a href="/register.html">Зарегистрироваться</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    redirectIfAuth('/feed.html');
+    
+    const form = document.getElementById('login-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Вход...';
+      
+      try {
+        const result = await api.login(email, password);
+        
+        // Check if user has a profile
+        if (result.user.hasProfile) {
+          window.location.href = '/feed.html';
+        } else {
+          window.location.href = '/create-profile.html';
+        }
+      } catch (error) {
+        showAlert(form, error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Войти';
+      }
+    });
+  </script>
+</body>
+</html>
+

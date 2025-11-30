@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Лента - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="container header-content">
+        <a href="/feed.html" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+        <nav class="nav">
+          <a href="/feed.html" class="nav-link active" title="Лента">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="9" rx="1"/>
+              <rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/>
+              <rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+          </a>
+          <a href="/matches.html" class="nav-link" title="Взаимные лайки" id="matches-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span class="badge hidden" id="matches-badge">0</span>
+          </a>
+          <a href="/profile.html" class="nav-link" title="Профиль">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+    
+    <main class="container feed-container">
+      <div id="feed-content">
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </main>
+    
+    <!-- Match popup modal -->
+    <div class="modal-overlay" id="match-modal">
+      <div class="modal">
+        <div class="modal-body match-popup">
+          <div class="match-popup-icon">&#10084;</div>
+          <h2>Это взаимно!</h2>
+          <p class="text-muted">Вы понравились друг другу</p>
+          <div class="match-popup-photos">
+            <div class="match-popup-photo">
+              <img id="match-my-photo" src="/img/no-photo.svg" alt="">
+            </div>
+            <div class="match-popup-photo">
+              <img id="match-their-photo" src="/img/no-photo.svg" alt="">
+            </div>
+          </div>
+          <p id="match-name" class="mb-4"></p>
+          <div style="display: flex; gap: var(--space-md); justify-content: center;">
+            <a href="/matches.html" class="btn btn-primary">Посмотреть</a>
+            <button class="btn btn-secondary" onclick="hideModal('match-modal'); loadNextProfile();">Продолжить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!requireAuth()) {
+      // Will redirect
+    }
+    
+    const feedContent = document.getElementById('feed-content');
+    const matchesBadge = document.getElementById('matches-badge');
+    const matchesLink = document.getElementById('matches-link');
+    
+    let feedProfiles = [];
+    let currentProfileIndex = 0;
+    let myProfile = null;
+    
+    async function init() {
+      try {
+        // Check if user has profile
+        myProfile = await api.getMyProfile();
+        if (!myProfile) {
+          window.location.href = '/create-profile.html';
+          return;
+        }
+        
+        // Check if user has photos
+        if (!myProfile.photos || myProfile.photos.length === 0) {
+          window.location.href = '/upload-photos.html';
+          return;
+        }
+        
+        // Load unviewed match count
+        await loadMatchCount();
+        
+        // Load feed
+        await loadFeed();
+      } catch (error) {
+        console.error('Init error:', error);
+        feedContent.innerHTML = `
+          <div class="feed-empty">
+            <div class="feed-empty-icon">:(</div>
+            <h3>Произошла ошибка</h3>
+            <p>${error.message}</p>
+            <button class="btn btn-primary mt-3" onclick="location.reload()">Попробовать снова</button>
+          </div>
+        `;
+      }
+    }
+    
+    async function loadMatchCount() {
+      try {
+        const result = await api.getUnviewedMatchCount();
+        if (result.count > 0) {
+          matchesBadge.textContent = result.count;
+          matchesBadge.classList.remove('hidden');
+        } else {
+          matchesBadge.classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('Failed to load match count:', error);
+      }
+    }
+    
+    async function loadFeed() {
+      try {
+        feedProfiles = await api.getFeed(1, 20);
+        currentProfileIndex = 0;
+        renderCurrentProfile();
+      } catch (error) {
+        feedContent.innerHTML = `
+          <div class="feed-empty">
+            <div class="feed-empty-icon">:(</div>
+            <h3>Ошибка загрузки</h3>
+            <p>${error.message}</p>
+            <button class="btn btn-primary mt-3" onclick="loadFeed()">Попробовать снова</button>
+          </div>
+        `;
+      }
+    }
+    
+    function renderCurrentProfile() {
+      if (currentProfileIndex >= feedProfiles.length) {
+        feedContent.innerHTML = `
+          <div class="feed-empty">
+            <div class="feed-empty-icon">&#128522;</div>
+            <h3>Анкеты закончились</h3>
+            <p>Вы просмотрели все доступные анкеты. Загляните позже!</p>
+            <button class="btn btn-primary mt-3" onclick="loadFeed()">Обновить</button>
+          </div>
+        `;
+        return;
+      }
+      
+      const profile = feedProfiles[currentProfileIndex];
+      const mainPhoto = profile.photos?.find(p => p.isMain) || profile.photos?.[0];
+      
+      feedContent.innerHTML = `
+        <div class="profile-card">
+          <div class="profile-card-image">
+            <img src="${getPhotoUrl(mainPhoto)}" alt="${profile.firstName}">
+            <div class="profile-card-gradient"></div>
+            <div class="profile-card-info">
+              <h2 class="profile-card-name">
+                ${profile.firstName}<span class="profile-card-age">, ${formatAge(profile.age)}</span>
+              </h2>
+              <div class="profile-card-location">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                ${profile.city?.name || 'Не указан'}
+              </div>
+              ${profile.bio ? `<p class="profile-card-bio">${profile.bio}</p>` : ''}
+            </div>
+          </div>
+          <div class="profile-card-actions">
+            <button class="btn btn-icon btn-dislike" onclick="handleDislike()" title="Не интересно">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+            <button class="btn btn-icon btn-like" onclick="handleLike()" title="Нравится">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    async function handleLike() {
+      const profile = feedProfiles[currentProfileIndex];
+      if (!profile) return;
+      
+      try {
+        const result = await api.like(profile.userId);
+        
+        if (result.isMatch) {
+          // Show match modal
+          const myPhoto = myProfile.photos?.find(p => p.isMain) || myProfile.photos?.[0];
+          const theirPhoto = profile.photos?.find(p => p.isMain) || profile.photos?.[0];
+          
+          document.getElementById('match-my-photo').src = getPhotoUrl(myPhoto);
+          document.getElementById('match-their-photo').src = getPhotoUrl(theirPhoto);
+          document.getElementById('match-name').textContent = `${profile.firstName}, ${profile.age}`;
+          
+          showModal('match-modal');
+          await loadMatchCount();
+        } else {
+          loadNextProfile();
+        }
+      } catch (error) {
+        console.error('Like error:', error);
+        alert(error.message);
+      }
+    }
+    
+    async function handleDislike() {
+      const profile = feedProfiles[currentProfileIndex];
+      if (!profile) return;
+      
+      try {
+        await api.dislike(profile.userId);
+        loadNextProfile();
+      } catch (error) {
+        console.error('Dislike error:', error);
+        alert(error.message);
+      }
+    }
+    
+    function loadNextProfile() {
+      currentProfileIndex++;
+      
+      // Load more profiles if running low
+      if (currentProfileIndex >= feedProfiles.length - 3) {
+        loadMoreProfiles();
+      }
+      
+      renderCurrentProfile();
+    }
+    
+    async function loadMoreProfiles() {
+      try {
+        const page = Math.floor(feedProfiles.length / 20) + 1;
+        const newProfiles = await api.getFeed(page, 20);
+        feedProfiles = [...feedProfiles, ...newProfiles];
+      } catch (error) {
+        console.error('Failed to load more profiles:', error);
+      }
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        handleDislike();
+      } else if (e.key === 'ArrowRight') {
+        handleLike();
+      }
+    });
+    
+    init();
+  </script>
+</body>
+</html>
+

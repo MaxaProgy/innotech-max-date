@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Создание профиля - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="container header-content">
+        <a href="/" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+      </div>
+    </header>
+    
+    <main class="container" style="padding: var(--space-2xl) var(--space-lg); max-width: 600px;">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="mb-4">Создайте свой профиль</h1>
+          <p class="text-muted mb-4">Заполните информацию о себе, чтобы начать знакомства</p>
+          
+          <form id="profile-form">
+            <div class="settings-section">
+              <h3 class="settings-section-title">Личные данные</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="firstName">Имя *</label>
+                <input type="text" id="firstName" class="form-input" required maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="lastName">Фамилия *</label>
+                <input type="text" id="lastName" class="form-input" required maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="middleName">Отчество</label>
+                <input type="text" id="middleName" class="form-input" maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="birthDate">Дата рождения *</label>
+                <input type="date" id="birthDate" class="form-input" required>
+                <div class="form-hint">Вам должно быть не менее 18 лет</div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="gender">Пол *</label>
+                <select id="gender" class="form-input" required>
+                  <option value="">Выберите пол</option>
+                  <option value="male">Мужской</option>
+                  <option value="female">Женский</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="city">Город *</label>
+                <select id="city" class="form-input" required>
+                  <option value="">Загрузка городов...</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h3 class="settings-section-title">Дополнительно</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="vkLink">ВКонтакте</label>
+                <input type="text" id="vkLink" class="form-input" placeholder="@username" maxlength="100">
+                <div class="form-hint">В формате @username</div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="maxLink">MAX</label>
+                <input type="text" id="maxLink" class="form-input" placeholder="https://max.me/username" maxlength="255">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="bio">О себе</label>
+                <textarea id="bio" class="form-input" rows="4" maxlength="2000" placeholder="Расскажите немного о себе..."></textarea>
+                <div class="form-hint"><span id="bio-count">0</span>/2000 символов</div>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="submit-btn">
+              Создать профиль
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!requireAuth()) {
+      // Will redirect
+    }
+    
+    const form = document.getElementById('profile-form');
+    const bioTextarea = document.getElementById('bio');
+    const bioCount = document.getElementById('bio-count');
+    const citySelect = document.getElementById('city');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Set max date for birthDate (must be 18+)
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    document.getElementById('birthDate').max = maxDate.toISOString().split('T')[0];
+    
+    // Bio character counter
+    bioTextarea.addEventListener('input', () => {
+      bioCount.textContent = bioTextarea.value.length;
+    });
+    
+    // Load cities
+    async function loadCities() {
+      try {
+        const cities = await api.getCities();
+        citySelect.innerHTML = '<option value="">Выберите город</option>';
+        cities.forEach(city => {
+          const option = document.createElement('option');
+          option.value = city.id;
+          option.textContent = `${city.name}${city.region ? `, ${city.region}` : ''}`;
+          citySelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load cities:', error);
+        citySelect.innerHTML = '<option value="">Ошибка загрузки городов</option>';
+      }
+    }
+    
+    loadCities();
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        middleName: document.getElementById('middleName').value || undefined,
+        birthDate: document.getElementById('birthDate').value,
+        gender: document.getElementById('gender').value,
+        cityId: parseInt(document.getElementById('city').value),
+        vkLink: document.getElementById('vkLink').value || undefined,
+        maxLink: document.getElementById('maxLink').value || undefined,
+        bio: document.getElementById('bio').value || undefined,
+      };
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Создание...';
+      
+      try {
+        await api.createProfile(data);
+        window.location.href = '/upload-photos.html';
+      } catch (error) {
+        showAlert(form, error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Создать профиль';
+      }
+    });
+  </script>
+</body>
+</html>
+

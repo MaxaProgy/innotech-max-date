@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Регистрация - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <a href="/" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+      </div>
+      
+      <div class="auth-card">
+        <h1 class="auth-title">Регистрация</h1>
+        
+        <form id="register-form">
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input 
+              type="email" 
+              id="email" 
+              class="form-input" 
+              placeholder="example@mail.ru"
+              maxlength="50"
+              required
+            >
+            <div class="form-hint">Должен заканчиваться на .ru</div>
+            <div class="form-error" id="email-error"></div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="password">Пароль</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="form-input" 
+              placeholder="Введите пароль"
+              minlength="8"
+              maxlength="20"
+              required
+            >
+            <div class="form-hint">
+              8-20 символов, минимум 1 цифра, одна строчная и одна заглавная буква кириллицы
+            </div>
+            <div class="form-error" id="password-error"></div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="password-confirm">Подтвердите пароль</label>
+            <input 
+              type="password" 
+              id="password-confirm" 
+              class="form-input" 
+              placeholder="Повторите пароль"
+              required
+            >
+            <div class="form-error" id="password-confirm-error"></div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="accept-terms" required>
+              <span>Я принимаю <a href="#" target="_blank">пользовательское соглашение</a></span>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="accept-privacy" required>
+              <span>Я даю согласие на <a href="#" target="_blank">обработку персональных данных</a></span>
+            </label>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-lg btn-block" id="submit-btn">
+            Зарегистрироваться
+          </button>
+        </form>
+        
+        <div class="auth-footer">
+          Уже есть аккаунт? <a href="/login.html">Войти</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    redirectIfAuth('/feed.html');
+    
+    const form = document.getElementById('register-form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const passwordConfirmInput = document.getElementById('password-confirm');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Real-time validation
+    emailInput.addEventListener('blur', () => {
+      const error = validateEmail(emailInput.value);
+      document.getElementById('email-error').textContent = error || '';
+      emailInput.classList.toggle('error', !!error);
+    });
+    
+    passwordInput.addEventListener('blur', () => {
+      const error = validatePassword(passwordInput.value);
+      document.getElementById('password-error').textContent = error || '';
+      passwordInput.classList.toggle('error', !!error);
+    });
+    
+    passwordConfirmInput.addEventListener('blur', () => {
+      const match = passwordInput.value === passwordConfirmInput.value;
+      const error = match ? '' : 'Пароли не совпадают';
+      document.getElementById('password-confirm-error').textContent = error;
+      passwordConfirmInput.classList.toggle('error', !match);
+    });
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      const passwordConfirm = passwordConfirmInput.value;
+      const acceptTerms = document.getElementById('accept-terms').checked;
+      const acceptPrivacy = document.getElementById('accept-privacy').checked;
+      
+      // Validate
+      const emailError = validateEmail(email);
+      if (emailError) {
+        document.getElementById('email-error').textContent = emailError;
+        emailInput.classList.add('error');
+        return;
+      }
+      
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        document.getElementById('password-error').textContent = passwordError;
+        passwordInput.classList.add('error');
+        return;
+      }
+      
+      if (password !== passwordConfirm) {
+        document.getElementById('password-confirm-error').textContent = 'Пароли не совпадают';
+        passwordConfirmInput.classList.add('error');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Регистрация...';
+      
+      try {
+        await api.register(email, password, acceptTerms, acceptPrivacy);
+        showAlert(form, 'Регистрация успешна! Проверьте почту для подтверждения.', 'success');
+        form.reset();
+      } catch (error) {
+        showAlert(form, error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Зарегистрироваться';
+      }
+    });
+  </script>
+</body>
+</html>
+

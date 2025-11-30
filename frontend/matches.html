@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Взаимные лайки - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="container header-content">
+        <a href="/feed.html" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+        <nav class="nav">
+          <a href="/feed.html" class="nav-link" title="Лента">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="9" rx="1"/>
+              <rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/>
+              <rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+          </a>
+          <a href="/matches.html" class="nav-link active" title="Взаимные лайки">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </a>
+          <a href="/profile.html" class="nav-link" title="Профиль">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+    
+    <main class="container" style="padding: var(--space-xl) var(--space-lg);">
+      <h1 class="mb-4">Взаимные лайки</h1>
+      
+      <div id="matches-content">
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!requireAuth()) {
+      // Will redirect
+    }
+    
+    const matchesContent = document.getElementById('matches-content');
+    
+    async function loadMatches() {
+      try {
+        const matches = await api.getMatches();
+        
+        if (matches.length === 0) {
+          matchesContent.innerHTML = `
+            <div class="feed-empty">
+              <div class="feed-empty-icon">&#128150;</div>
+              <h3>Пока нет взаимных лайков</h3>
+              <p>Продолжайте просматривать анкеты, чтобы найти совпадения</p>
+              <a href="/feed.html" class="btn btn-primary mt-3">К ленте</a>
+            </div>
+          `;
+          return;
+        }
+        
+        matchesContent.innerHTML = `<div class="matches-grid" id="matches-grid"></div>`;
+        const grid = document.getElementById('matches-grid');
+        
+        matches.forEach(match => {
+          const card = document.createElement('div');
+          card.className = `match-card${match.isNew ? ' is-new' : ''}`;
+          card.innerHTML = `
+            <div class="match-card-image">
+              <img src="${getPhotoUrl(match.profile.mainPhoto)}" alt="${match.profile.firstName}">
+            </div>
+            <div class="match-card-body">
+              <h3 class="match-card-name">${match.profile.firstName}, ${match.profile.age}</h3>
+              <p class="match-card-city">${match.profile.city?.name || ''}</p>
+              ${match.profile.maxLink ? `
+                <a href="${match.profile.maxLink}" target="_blank" class="btn btn-primary btn-sm btn-block">
+                  Написать в MAX
+                </a>
+              ` : match.profile.vkLink ? `
+                <a href="https://vk.com/${match.profile.vkLink.replace('@', '')}" target="_blank" class="btn btn-primary btn-sm btn-block">
+                  Написать в VK
+                </a>
+              ` : `
+                <p class="text-muted text-center" style="font-size: 0.875rem;">Нет ссылки для связи</p>
+              `}
+            </div>
+          `;
+          
+          // Mark as viewed on click
+          if (match.isNew) {
+            card.addEventListener('click', async () => {
+              try {
+                await api.markMatchAsViewed(match.matchId);
+                card.classList.remove('is-new');
+              } catch (error) {
+                console.error('Failed to mark as viewed:', error);
+              }
+            }, { once: true });
+          }
+          
+          grid.appendChild(card);
+        });
+      } catch (error) {
+        matchesContent.innerHTML = `
+          <div class="feed-empty">
+            <div class="feed-empty-icon">:(</div>
+            <h3>Ошибка загрузки</h3>
+            <p>${error.message}</p>
+            <button class="btn btn-primary mt-3" onclick="loadMatches()">Попробовать снова</button>
+          </div>
+        `;
+      }
+    }
+    
+    loadMatches();
+  </script>
+</body>
+</html>
+

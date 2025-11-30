@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaxDate - Найди свою половинку</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <a href="/" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+      </div>
+      
+      <div class="auth-card">
+        <h1 class="auth-title">Добро пожаловать</h1>
+        
+        <p class="text-center mb-4">
+          MaxDate - современный сервис знакомств для тех, кто ищет настоящие отношения.
+        </p>
+        
+        <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+          <a href="/register.html" class="btn btn-primary btn-lg btn-block">
+            Создать аккаунт
+          </a>
+          <a href="/login.html" class="btn btn-secondary btn-lg btn-block">
+            Войти
+          </a>
+        </div>
+        
+        <div class="auth-footer">
+          <p class="text-muted" style="font-size: 0.875rem; margin-top: var(--space-xl);">
+            Регистрируясь, вы соглашаетесь с условиями использования сервиса
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    // Redirect to feed if already logged in
+    redirectIfAuth('/feed.html');
+  </script>
+</body>
+</html>
+

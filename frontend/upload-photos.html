@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Загрузка фото - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="container header-content">
+        <a href="/" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+      </div>
+    </header>
+    
+    <main class="container" style="padding: var(--space-2xl) var(--space-lg); max-width: 600px;">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="mb-4">Добавьте фотографии</h1>
+          <p class="text-muted mb-4">Загрузите минимум одну фотографию для вашего профиля (максимум 5)</p>
+          
+          <div id="photos-grid" class="profile-photos">
+            <!-- Photos will be rendered here -->
+          </div>
+          
+          <input type="file" id="photo-input" accept="image/jpeg,image/png" style="display: none;">
+          
+          <div class="mt-4">
+            <button id="continue-btn" class="btn btn-primary btn-lg btn-block" disabled>
+              Продолжить
+            </button>
+            <p class="form-hint text-center mt-2">Загрузите минимум одно фото</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!requireAuth()) {
+      // Will redirect
+    }
+    
+    const photosGrid = document.getElementById('photos-grid');
+    const photoInput = document.getElementById('photo-input');
+    const continueBtn = document.getElementById('continue-btn');
+    
+    let photos = [];
+    const MAX_PHOTOS = 5;
+    
+    async function loadPhotos() {
+      try {
+        const profile = await api.getMyProfile();
+        if (profile && profile.photos) {
+          photos = profile.photos;
+          renderPhotos();
+        }
+      } catch (error) {
+        console.error('Failed to load photos:', error);
+      }
+    }
+    
+    function renderPhotos() {
+      photosGrid.innerHTML = '';
+      
+      // Render existing photos
+      photos.forEach((photo, index) => {
+        const photoEl = document.createElement('div');
+        photoEl.className = `profile-photo${photo.isMain ? ' is-main' : ''}`;
+        photoEl.innerHTML = `
+          <img src="${getPhotoUrl(photo)}" alt="Фото ${index + 1}">
+        `;
+        photoEl.addEventListener('click', () => showPhotoOptions(photo));
+        photosGrid.appendChild(photoEl);
+      });
+      
+      // Add upload button if under limit
+      if (photos.length < MAX_PHOTOS) {
+        const addBtn = document.createElement('div');
+        addBtn.className = 'profile-photo';
+        addBtn.innerHTML = '<div class="profile-photo-add">+</div>';
+        addBtn.addEventListener('click', () => photoInput.click());
+        photosGrid.appendChild(addBtn);
+      }
+      
+      // Update continue button
+      continueBtn.disabled = photos.length === 0;
+    }
+    
+    function showPhotoOptions(photo) {
+      const isMain = photo.isMain;
+      const options = [];
+      
+      if (!isMain) {
+        options.push({ label: 'Сделать главным', action: () => setMainPhoto(photo.id) });
+      }
+      options.push({ label: 'Удалить', action: () => deletePhoto(photo.id), danger: true });
+      
+      // Simple confirm for now
+      if (confirm(`Фото ${isMain ? '(главное)' : ''}\n\nУдалить это фото?`)) {
+        deletePhoto(photo.id);
+      }
+    }
+    
+    async function setMainPhoto(photoId) {
+      try {
+        await api.setMainPhoto(photoId);
+        photos = photos.map(p => ({ ...p, isMain: p.id === photoId }));
+        renderPhotos();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+    
+    async function deletePhoto(photoId) {
+      if (photos.length <= 1) {
+        alert('Необходимо минимум одно фото');
+        return;
+      }
+      
+      try {
+        await api.deletePhoto(photoId);
+        photos = photos.filter(p => p.id !== photoId);
+        renderPhotos();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+    
+    photoInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Validate file size (20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Файл слишком большой. Максимум 20 МБ.');
+        return;
+      }
+      
+      try {
+        const isMain = photos.length === 0;
+        const newPhoto = await api.uploadPhoto(file, isMain);
+        photos.push(newPhoto);
+        renderPhotos();
+      } catch (error) {
+        alert(error.message);
+      }
+      
+      photoInput.value = '';
+    });
+    
+    continueBtn.addEventListener('click', () => {
+      window.location.href = '/feed.html';
+    });
+    
+    loadPhotos();
+  </script>
+</body>
+</html>
+

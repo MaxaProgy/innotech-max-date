@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Редактирование профиля - MaxDate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="container header-content">
+        <a href="/feed.html" class="logo">
+          <div class="logo-icon">M</div>
+          <span>MaxDate</span>
+        </a>
+        <nav class="nav">
+          <a href="/profile.html" class="btn btn-secondary btn-sm">Назад</a>
+        </nav>
+      </div>
+    </header>
+    
+    <main class="container" style="padding: var(--space-xl) var(--space-lg); max-width: 600px;">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="mb-4">Редактирование профиля</h1>
+          
+          <form id="profile-form">
+            <div class="settings-section">
+              <h3 class="settings-section-title">Личные данные</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="firstName">Имя</label>
+                <input type="text" id="firstName" class="form-input" required maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="lastName">Фамилия</label>
+                <input type="text" id="lastName" class="form-input" required maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="middleName">Отчество</label>
+                <input type="text" id="middleName" class="form-input" maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="birthDate">Дата рождения</label>
+                <input type="date" id="birthDate" class="form-input" required>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="gender">Пол</label>
+                <select id="gender" class="form-input" required>
+                  <option value="male">Мужской</option>
+                  <option value="female">Женский</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="city">Город</label>
+                <select id="city" class="form-input" required>
+                  <option value="">Загрузка...</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h3 class="settings-section-title">Контакты</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="vkLink">VK</label>
+                <input type="text" id="vkLink" class="form-input" placeholder="@username" maxlength="100">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="maxLink">MAX</label>
+                <input type="text" id="maxLink" class="form-input" placeholder="https://max.me/username" maxlength="255">
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h3 class="settings-section-title">О себе</h3>
+              
+              <div class="form-group">
+                <textarea id="bio" class="form-input" rows="4" maxlength="2000" placeholder="Расскажите о себе..."></textarea>
+                <div class="form-hint"><span id="bio-count">0</span>/2000</div>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h3 class="settings-section-title">Приватность</h3>
+              
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input type="checkbox" id="hideEmail">
+                  <span>Скрыть email от других пользователей</span>
+                </label>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input type="checkbox" id="isVisible">
+                  <span>Показывать мой профиль в ленте</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h3 class="settings-section-title">Кого ищу</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="preferredGender">Пол</label>
+                <select id="preferredGender" class="form-input">
+                  <option value="">Любой</option>
+                  <option value="male">Мужской</option>
+                  <option value="female">Женский</option>
+                </select>
+              </div>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+                <div class="form-group">
+                  <label class="form-label" for="preferredAgeMin">Возраст от</label>
+                  <input type="number" id="preferredAgeMin" class="form-input" min="18" max="100">
+                </div>
+                
+                <div class="form-group">
+                  <label class="form-label" for="preferredAgeMax">Возраст до</label>
+                  <input type="number" id="preferredAgeMax" class="form-input" min="18" max="100">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="preferredCity">Город</label>
+                <select id="preferredCity" class="form-input">
+                  <option value="">Любой</option>
+                </select>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="submit-btn">
+              Сохранить
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!requireAuth()) {
+      // Will redirect
+    }
+    
+    const form = document.getElementById('profile-form');
+    const bioTextarea = document.getElementById('bio');
+    const bioCount = document.getElementById('bio-count');
+    const citySelect = document.getElementById('city');
+    const preferredCitySelect = document.getElementById('preferredCity');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    let profile = null;
+    let cities = [];
+    
+    bioTextarea.addEventListener('input', () => {
+      bioCount.textContent = bioTextarea.value.length;
+    });
+    
+    async function init() {
+      try {
+        [profile, cities] = await Promise.all([
+          api.getMyProfile(),
+          api.getCities()
+        ]);
+        
+        if (!profile) {
+          window.location.href = '/create-profile.html';
+          return;
+        }
+        
+        // Populate city selects
+        citySelect.innerHTML = '<option value="">Выберите город</option>';
+        preferredCitySelect.innerHTML = '<option value="">Любой</option>';
+        
+        cities.forEach(city => {
+          const option1 = document.createElement('option');
+          option1.value = city.id;
+          option1.textContent = `${city.name}${city.region ? `, ${city.region}` : ''}`;
+          citySelect.appendChild(option1);
+          
+          const option2 = option1.cloneNode(true);
+          preferredCitySelect.appendChild(option2);
+        });
+        
+        // Fill form
+        document.getElementById('firstName').value = profile.firstName || '';
+        document.getElementById('lastName').value = profile.lastName || '';
+        document.getElementById('middleName').value = profile.middleName || '';
+        document.getElementById('birthDate').value = profile.birthDate?.split('T')[0] || '';
+        document.getElementById('gender').value = profile.gender || '';
+        document.getElementById('city').value = profile.cityId || '';
+        document.getElementById('vkLink').value = profile.vkLink || '';
+        document.getElementById('maxLink').value = profile.maxLink || '';
+        document.getElementById('bio').value = profile.bio || '';
+        document.getElementById('hideEmail').checked = profile.hideEmail || false;
+        document.getElementById('isVisible').checked = profile.isVisible !== false;
+        document.getElementById('preferredGender').value = profile.preferredGender || '';
+        document.getElementById('preferredAgeMin').value = profile.preferredAgeMin || '';
+        document.getElementById('preferredAgeMax').value = profile.preferredAgeMax || '';
+        document.getElementById('preferredCity').value = profile.preferredCityId || '';
+        
+        bioCount.textContent = (profile.bio || '').length;
+      } catch (error) {
+        showAlert(form, error.message);
+      }
+    }
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        middleName: document.getElementById('middleName').value || undefined,
+        birthDate: document.getElementById('birthDate').value,
+        gender: document.getElementById('gender').value,
+        cityId: parseInt(document.getElementById('city').value),
+        vkLink: document.getElementById('vkLink').value || undefined,
+        maxLink: document.getElementById('maxLink').value || undefined,
+        bio: document.getElementById('bio').value || undefined,
+        hideEmail: document.getElementById('hideEmail').checked,
+        isVisible: document.getElementById('isVisible').checked,
+        preferredGender: document.getElementById('preferredGender').value || undefined,
+        preferredAgeMin: parseInt(document.getElementById('preferredAgeMin').value) || undefined,
+        preferredAgeMax: parseInt(document.getElementById('preferredAgeMax').value) || undefined,
+        preferredCityId: parseInt(document.getElementById('preferredCity').value) || undefined,
+      };
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Сохранение...';
+      
+      try {
+        await api.updateProfile(data);
+        showAlert(form, 'Профиль обновлен', 'success');
+      } catch (error) {
+        showAlert(form, error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Сохранить';
+      }
+    });
+    
+    init();
+  </script>
+</body>
+</html>
+
